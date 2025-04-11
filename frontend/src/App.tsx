@@ -13,7 +13,7 @@ interface JobApplication {
   link: string;
 }
 
-const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URL}/api/jobs`;
+const API_BASE_URL ="https://job-tracker-bj8f.onrender.com/api/jobs";
 
 function App() {
   const [applications, setApplications] = useState<JobApplication[]>([]);
