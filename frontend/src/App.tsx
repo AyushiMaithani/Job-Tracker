@@ -1,54 +1,85 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { PlusCircle, Briefcase, Calendar, Link as LinkIcon, X } from 'lucide-react';
 
 type Status = 'Applied' | 'Interview' | 'Offer' | 'Rejected';
 
 interface JobApplication {
-  id: string;
+  _id: string; // comes from MongoDB
   company: string;
-  role: string;
+  position: string;
   status: Status;
   dateApplied: string;
   link: string;
 }
 
+const API_BASE_URL = 'http://localhost:8000/api/jobs'; 
 function App() {
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [statusFilter, setStatusFilter] = useState<Status | 'All'>('All');
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<Omit<JobApplication, 'id'>>({
+  const [formData, setFormData] = useState<Omit<JobApplication, '_id'>>({
     company: '',
-    role: '',
+    position: '',
     status: 'Applied',
     dateApplied: new Date().toISOString().split('T')[0],
     link: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newApplication = {
-      ...formData,
-      id: crypto.randomUUID(),
+  // Fetch jobs from backend
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/getjobs`);
+        setApplications(res.data);
+      } catch (err) {
+        console.error('Error fetching jobs:', err);
+      }
     };
-    setApplications([...applications, newApplication]);
-    setShowForm(false);
-    setFormData({
-      company: '',
-      role: '',
-      status: 'Applied',
-      dateApplied: new Date().toISOString().split('T')[0],
-      link: '',
-    });
+    fetchJobs();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await axios.post(`${API_BASE_URL}/createjob`, formData);
+      setApplications([res.data, ...applications]);
+      setShowForm(false);
+      setFormData({
+        company: '',
+        position: '',
+        status: 'Applied',
+        dateApplied: new Date().toISOString().split('T')[0],
+        link: '',
+      });
+    } catch (err) {
+      console.error('Error adding job:', err);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setApplications(applications.filter(app => app.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(`${API_BASE_URL}/deletejob/${id}`);
+      setApplications(applications.filter(app => app._id !== id));
+    } catch (err) {
+      console.error('Error deleting job:', err);
+    }
   };
 
-  const handleStatusUpdate = (id: string, newStatus: Status) => {
-    setApplications(applications.map(app =>
-      app.id === id ? { ...app, status: newStatus } : app
-    ));
+  const handleStatusUpdate = async (id: string, newStatus: Status) => {
+    try {
+      const jobToUpdate = applications.find(app => app._id === id);
+      if (!jobToUpdate) return;
+
+      const res = await axios.put(`${API_BASE_URL}/updatejob/${id}`, {
+        ...jobToUpdate,
+        status: newStatus,
+      });
+
+      setApplications(applications.map(app => (app._id === id ? res.data : app)));
+    } catch (err) {
+      console.error('Error updating job:', err);
+    }
   };
 
   const filteredApplications = applications.filter(app =>
@@ -63,7 +94,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Student Job Tracker</h1>
@@ -115,8 +146,8 @@ function App() {
                   <input
                     type="text"
                     required
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    value={formData.position}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -167,13 +198,13 @@ function App() {
 
         <div className="grid gap-4">
           {filteredApplications.map((application) => (
-            <div key={application.id} className="bg-white rounded-lg shadow-sm p-6">
+            <div key={application._id} className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900">{application.company}</h3>
                   <p className="text-gray-600 flex items-center gap-2 mt-1">
                     <Briefcase size={16} />
-                    {application.role}
+                    {application.position}
                   </p>
                   <div className="flex items-center gap-4 mt-2">
                     <p className="text-gray-600 flex items-center gap-1">
@@ -197,7 +228,7 @@ function App() {
                   </span>
                   <select
                     value={application.status}
-                    onChange={(e) => handleStatusUpdate(application.id, e.target.value as Status)}
+                    onChange={(e) => handleStatusUpdate(application._id, e.target.value as Status)}
                     className="bg-gray-100 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="Applied">Applied</option>
@@ -206,7 +237,7 @@ function App() {
                     <option value="Rejected">Rejected</option>
                   </select>
                   <button
-                    onClick={() => handleDelete(application.id)}
+                    onClick={() => handleDelete(application._id)}
                     className="text-red-600 hover:text-red-800 p-1"
                   >
                     <X size={20} />
