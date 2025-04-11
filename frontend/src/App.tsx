@@ -5,7 +5,7 @@ import { PlusCircle, Briefcase, Calendar, Link as LinkIcon, X } from 'lucide-rea
 type Status = 'Applied' | 'Interview' | 'Offer' | 'Rejected';
 
 interface JobApplication {
-  _id: string; // comes from MongoDB
+  _id: string; 
   company: string;
   position: string;
   status: Status;
@@ -13,7 +13,7 @@ interface JobApplication {
   link: string;
 }
 
-const API_BASE_URL = 'http://localhost:8000/api/jobs'; 
+const API_BASE_URL = import.meta.env.VITE_API_BACKEND_URL;
 function App() {
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [statusFilter, setStatusFilter] = useState<Status | 'All'>('All');
