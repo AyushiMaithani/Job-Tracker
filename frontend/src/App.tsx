@@ -13,7 +13,7 @@ interface JobApplication {
   link: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URL}/api/jobs`;
 
 function App() {
   const [applications, setApplications] = useState<JobApplication[]>([]);
